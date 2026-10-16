@@ -5,9 +5,14 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 
-const CLIENT = process.env.CLIENT_URL || "http://localhost:5173";
 const app = express();
-app.use(cors({ origin: CLIENT }));
+
+// Allow flexible origins for local network testing (or fallback to your env)
+app.use(cors({
+  origin: true, // Dynamically allows whatever frontend URL/IP is making the request
+  credentials: true
+}));
+
 app.use(express.json());
 
 app.get("/api/health", (_, res) => res.json({ ok: true }));
@@ -15,7 +20,14 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/rooms", require("./routes/rooms"));
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: CLIENT } });
+
+const io = new Server(server, {
+  cors: {
+    origin: true,
+    methods: ["GET", "POST"]
+  }
+});
+
 require("./socket")(io);
 
 connectDB()

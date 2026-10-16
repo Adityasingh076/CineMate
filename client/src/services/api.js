@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api" });
+const host = window.location.hostname || "localhost";
+// Explicitly point to port 5000 for the backend server
+const baseURL = `http://${host}:5000/api`;
+
+const api = axios.create({ baseURL });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");

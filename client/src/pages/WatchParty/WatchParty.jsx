@@ -18,27 +18,63 @@ export default function WatchParty() {
 
   useEffect(() => {
     let cancelled = false;
-    api.get(`/rooms/${code}`).then(({ data }) => {
-      if (cancelled) return;
-      setRoom(data);
-      socket.auth = { token: localStorage.getItem("token") };
-      const join = () => { socket.emit("join-room", { roomCode: data.code }); setReady(true); };
-      socket.on("connect", join);
-      socket.on("members", setMembers);
-      socket.on("room-error", setErr);
-      socket.on("connect_error", (e) => setErr(e.message));
-      socket.connect();
-    }).catch((e) => setErr(errMsg(e)));
+
+    api.get(`/rooms/${code}`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setRoom(data);
+
+        socket.auth = { token: localStorage.getItem("token") };
+
+        const joinRoom = () => {
+          socket.emit("join-room", { roomCode: data.code });
+          setReady(true);
+        };
+
+        socket.on("connect", joinRoom);
+        socket.on("members", setMembers);
+        socket.on("room-error", setErr);
+        socket.on("connect_error", (e) => setErr(e.message));
+
+        // If the socket is already connected, join immediately; otherwise connect
+        if (socket.connected) {
+          joinRoom();
+        } else {
+          socket.connect();
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setErr(errMsg(e));
+      });
 
     return () => {
       cancelled = true;
-      socket.off("connect"); socket.off("members"); socket.off("room-error"); socket.off("connect_error");
+      socket.off("connect");
+      socket.off("members");
+      socket.off("room-error");
+      socket.off("connect_error");
       socket.disconnect();
     };
   }, [code]);
 
-  if (err) return <div className="center"><div className="card"><span className="error">{err}</span><button onClick={() => nav("/")}>Home</button></div></div>;
-  if (!room || !ready) return <div className="center muted">Connecting…</div>;
+  if (err) {
+    return (
+      <div className="center" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#05050a", color: "#fff" }}>
+        <div className="card" style={{ background: "rgba(15,15,25,0.8)", padding: "30px", borderRadius: "12px", textAlign: "center" }}>
+          <span className="error" style={{ color: "#ff6b6b", display: "block", marginBottom: "15px" }}>{err}</span>
+          <button onClick={() => nav("/")} style={{ background: "#e50914", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "6px", cursor: "pointer" }}>Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!room || !ready) {
+    return (
+      <div style={{ height: "100vh", width: "100vw", background: "#05050a", display: "flex", justifyContent: "center", alignItems: "center", color: "#9aa0a6", fontSize: "1.2rem", fontFamily: "sans-serif" }}>
+        Connecting to Watch Party…
+      </div>
+    );
+  }
 
   return (
     <>
